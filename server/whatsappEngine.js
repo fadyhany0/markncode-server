@@ -326,7 +326,7 @@ https://markncode.com/Markncode_Quotation_Proposal_2026.pdf
       replyText: `🎙️ **تفضل توضيح بصوت مستشار المبيعات في ماركن كود (AI Voice Note):**
 
 "أهلاً بحضرتك! أنا مستشار التسويق الرقمي في ماركن كود. بنبني بنية Meta CAPI و 3D Landing Pages عشان كل جنيه يدخل إعلاناتك يجيب قيمته وزيادة."
-
+https://huggingface.co/spaces
 رابط الاستماع للمقطع الصوتي:
 https://markncode.com/voice-notes/welcome-sales.ogg`
     };
