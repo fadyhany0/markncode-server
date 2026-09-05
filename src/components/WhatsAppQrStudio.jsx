@@ -8,11 +8,17 @@ export default function WhatsAppQrStudio({ onConnectedSuccess, openTab }) {
   const [connectedPhone, setConnectedPhone] = useState(null);
   const [loading, setLoading] = useState(false);
   const [serverOnline, setServerOnline] = useState(false);
+  const [backendUrl, setBackendUrl] = useState(() => {
+    return localStorage.getItem('markncode_backend_url') || 
+      (typeof window !== 'undefined' && window.location.hostname !== 'localhost' ? `http://${window.location.hostname}:3001` : 'http://localhost:3001');
+  });
+  const [showConfigUrl, setShowConfigUrl] = useState(false);
 
   // Poll Real Baileys WebSocket Server for Genuine WhatsApp QR Code
   const fetchRealWhatsAppQr = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/qr/real');
+      const targetUrl = (backendUrl || 'http://localhost:3001').replace(/\/$/, '');
+      const res = await fetch(`${targetUrl}/api/qr/real`);
       if (res.ok) {
         setServerOnline(true);
         const data = await res.json();
@@ -26,6 +32,8 @@ export default function WhatsAppQrStudio({ onConnectedSuccess, openTab }) {
           setStatus('QR_READY');
           setLoading(false);
         }
+      } else {
+        setServerOnline(false);
       }
     } catch (err) {
       setServerOnline(false);
@@ -36,15 +44,23 @@ export default function WhatsAppQrStudio({ onConnectedSuccess, openTab }) {
     fetchRealWhatsAppQr();
     const interval = setInterval(fetchRealWhatsAppQr, 2000); // Poll real Baileys server every 2 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [backendUrl]);
 
   const handleLogout = async () => {
     setLoading(true);
-    await fetch('http://localhost:3001/api/qr/logout', { method: 'POST' }).catch(() => null);
+    const targetUrl = (backendUrl || 'http://localhost:3001').replace(/\/$/, '');
+    await fetch(`${targetUrl}/api/qr/logout`, { method: 'POST' }).catch(() => null);
     setStatus('GENERATING');
     setConnectedPhone(null);
     setQrCodeUrl('');
     fetchRealWhatsAppQr();
+  };
+
+  const handleSaveBackendUrl = (newUrl) => {
+    const cleanUrl = newUrl.trim().replace(/\/$/, '');
+    setBackendUrl(cleanUrl);
+    localStorage.setItem('markncode_backend_url', cleanUrl);
+    setShowConfigUrl(false);
   };
 
   return (
@@ -60,10 +76,38 @@ export default function WhatsAppQrStudio({ onConnectedSuccess, openTab }) {
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${serverOnline ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
             <span className="text-xs text-slate-300 font-latin">
-              {serverOnline ? 'Baileys Socket Server Online (Port 3001)' : 'Connecting to Server...'}
+              {serverOnline ? `Server Online (${backendUrl})` : 'Connecting to Server...'}
             </span>
+            <button 
+              onClick={() => setShowConfigUrl(!showConfigUrl)}
+              className="text-[11px] px-2.5 py-1 rounded bg-white/10 text-cyan-400 hover:bg-white/20 transition border border-cyan-500/30"
+            >
+              ⚙️ ضبط عنوان السيرفر
+            </button>
           </div>
         </div>
+
+        {showConfigUrl && (
+          <div className="mt-3 p-3 rounded-xl bg-slate-900/90 border border-cyan-500/40 flex flex-col sm:flex-row items-center gap-2">
+            <span className="text-xs text-slate-300 whitespace-nowrap">رابط السيرفر (الموبايل أو Cloudflare):</span>
+            <input 
+              type="text" 
+              defaultValue={backendUrl}
+              id="customBackendUrlInput"
+              placeholder="مثال: http://192.168.1.15:3001 أو رابط cloudflare"
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-cyan-400 font-latin"
+            />
+            <button 
+              onClick={() => {
+                const val = document.getElementById('customBackendUrlInput')?.value;
+                if (val) handleSaveBackendUrl(val);
+              }}
+              className="px-4 py-1.5 rounded-lg bg-cyan-500 text-slate-950 font-bold text-xs hover:bg-cyan-400 transition whitespace-nowrap"
+            >
+              حفظ وتطبيق
+            </button>
+          </div>
+        )}
 
         <h2 className="text-2xl md:text-3xl font-extrabold text-white">ربط الواتساب الحقيقي (Official WhatsApp Web QR) 📲</h2>
         <p className="text-slate-300 text-sm mt-1">
